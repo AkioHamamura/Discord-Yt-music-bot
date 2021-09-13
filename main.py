@@ -40,7 +40,7 @@ async def play(ctx, url):
         await voice.move_to(channel)
     else:
         voice = await channel.connect()  
-    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'true'}
+    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'false'}
     FFMPEG_OPTIONS = {
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
     voice = get(client.voice_clients, guild=ctx.guild)
