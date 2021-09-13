@@ -13,7 +13,7 @@ load_dotenv()
 client = commands.Bot(command_prefix='!')  # prefix our commands with '.'
 
 players = {}
-
+List = []
 
 @client.event  # check if bot is ready
 async def on_ready():
@@ -40,10 +40,16 @@ async def play(ctx, url):
         await voice.move_to(channel)
     else:
         voice = await channel.connect()  
+
+
     YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'false'}
     FFMPEG_OPTIONS = {
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
     voice = get(client.voice_clients, guild=ctx.guild)
+
+    List.append(url)
+    
+
 
     if not voice.is_playing():
         with YoutubeDL(YDL_OPTIONS) as ydl:
@@ -87,11 +93,10 @@ async def pause(ctx):
 @client.command()
 async def stop(ctx):
     voice = get(client.voice_clients, guild=ctx.guild)
-
     if voice.is_playing():
         voice.stop()
-        await ctx.send('Stopping...')
-
+        await ctx.send('Stopping....Playlist has been reset')
+    List = []
 
 # command to clear channel messages
 @client.command()
