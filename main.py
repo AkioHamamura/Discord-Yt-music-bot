@@ -14,16 +14,17 @@ client = commands.Bot(command_prefix='!')  # prefix our commands with '.'
 
 players = {}
 List = []
+Key = 0
 
 @client.event  # check if bot is ready
 async def on_ready():
     print('Bot online')
-    print(client)
+
+
 # command for bot to join the channel of the user, if the bot has already joined and is in a different channel, it will move to the channel the user is in
 @client.command()
 async def join(ctx):
     channel = ctx.message.author.voice.channel
-    print(channel)
     voice = get(client.voice_clients, guild=ctx.guild)
     if voice and voice.is_connected():
         await voice.move_to(channel)
@@ -31,9 +32,11 @@ async def join(ctx):
         voice = await channel.connect()
 
 
+
 # command to play sound from a youtube URL
 @client.command()
 async def play(ctx, url):
+    global List
     channel = ctx.message.author.voice.channel
     voice = get(client.voice_clients, guild=ctx.guild)
     if voice and voice.is_connected():
@@ -42,32 +45,48 @@ async def play(ctx, url):
         voice = await channel.connect()  
 
 
-    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'false'}
+    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'true'}
     FFMPEG_OPTIONS = {
         'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
     voice = get(client.voice_clients, guild=ctx.guild)
 
-    List.append(url)
-    
+    if voice.is_playing():
+      List.append(url)
+      await ctx.send("Added video to queue")
 
-
-    if not voice.is_playing():
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-        URL = info['url']
-        voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
-        voice.is_playing()
-        await ctx.send('Bot is playing')
-
-# check if the bot is already playing
-    else:
-        await ctx.send("Bot is already playing")
-        return
+    elif not voice.is_playing():
+      List.append(url)
+      with YoutubeDL(YDL_OPTIONS) as ydl:
+        info = ydl.extract_info(List[Key], download=False) 
+      URL = info['url']              
+      voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
+      voice.is_playing()
+      await ctx.send('Bot is playing...')
+  
 
 # command to skip song
-#@client.command()
-#async def skip(ctx):
-    
+@client.command()
+async def skip(ctx):
+  global List
+  channel = ctx.message.author.voice.channel
+  voice = get(client.voice_clients, guild=ctx.guild)
+  if voice.is_playing():
+      voice.stop()
+      YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'false'}
+      FFMPEG_OPTIONS = {
+          'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+      voice = get(client.voice_clients, guild=ctx.guild)
+
+      global Key
+      Key += 1
+
+      with YoutubeDL(YDL_OPTIONS) as ydl:
+          info = ydl.extract_info(List[Key], download=False)
+      URL = info['url']
+      voice.play(FFmpegPCMAudio(URL, **FFMPEG_OPTIONS))
+      voice.is_playing()
+      await ctx.send('Skipping to next video...')
+
 
 # command to resume voice if it is paused
 @client.command()
@@ -76,7 +95,7 @@ async def resume(ctx):
 
     if not voice.is_playing():
         voice.resume()
-        await ctx.send('Bot is resuming')
+        await ctx.send('Bot is resuming...')
 
 
 # command to pause voice if it is playing
@@ -96,14 +115,24 @@ async def stop(ctx):
     if voice.is_playing():
         voice.stop()
         await ctx.send('Stopping....Playlist has been reset')
+
+    global List
     List = []
+    global Key
+    Key = 0
 
-# command to clear channel messages
+
+# command to force disconnect bot
 @client.command()
-async def clear(ctx, amount=5):
-    await ctx.channel.purge(limit=amount)
-    await ctx.send("Messages have been cleared")
-
+async def leave(ctx):
+    voice = get(client.voice_clients, guild=ctx.guild)
+    global List
+    List = []
+    global Key
+    channel = ctx.voice_client.channel
+    await ctx.voice_client.disconnect()
+    await ctx.send("Disconnected from voice channel")
+    await ctx.send("Clearing playlists...")
 keep_alive()
 client.run(os.getenv('TOKEN'))
 
